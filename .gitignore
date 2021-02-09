@@ -1,0 +1,6 @@
+.vscode/
+*.crt
+docs/
+arstomp/obj/
+arstomp/bin/
+arstomp/src/internal

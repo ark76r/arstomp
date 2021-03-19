@@ -68,7 +68,7 @@ namespace ArStomp
 			return sb.ToString();
 		}
 
-		internal ValueTask Serialize(ClientWebSocket ws, CancellationToken cancellationToken)
+		internal Task Serialize(ClientWebSocket ws, CancellationToken cancellationToken)
 		{
 			var utf8 = Encoding.UTF8;
 			var EOL = utf8.GetBytes("\n");
@@ -78,29 +78,29 @@ namespace ArStomp
 
 			// write command
 			var cmd = Helpers.GetCmdString(Type);
-			stream.Write(utf8.GetBytes(cmd));
-			stream.Write(EOL);
+			stream.WriteWholeArray(utf8.GetBytes(cmd));
+			stream.WriteWholeArray(EOL);
 			// write headers
 			foreach (var i in Headers)
 			{
-				stream.Write(utf8.GetBytes(i.Key));
-				stream.Write(COLON);
-				stream.Write(utf8.GetBytes(i.Value));
-				stream.Write(EOL);
+				stream.WriteWholeArray(utf8.GetBytes(i.Key));
+				stream.WriteWholeArray(COLON);
+				stream.WriteWholeArray(utf8.GetBytes(i.Value));
+				stream.WriteWholeArray(EOL);
 			}
 			// write empty line
-			stream.Write(EOL);
+			stream.WriteWholeArray(EOL);
 			// write body
 			if (Body != null && Body.Count > 0)
 			{
-				stream.Write(Body);
+				stream.Write(Body.Array, Body.Offset, Body.Count);
 			}
 			// write NUL character
-			stream.Write(NUL);
+			stream.WriteWholeArray(NUL);
 			stream.Flush();
 			var array = stream.GetBuffer();
 			if (StompClient.Debug) Console.WriteLine(">>>\n{0}\n>>>\n", this);
-			return ws.SendAsync(array.AsMemory(0, (int)stream.Position), WebSocketMessageType.Binary, true, cancellationToken);
+			return ws.SendAsync(new ArraySegment<byte>(array, 0, (int)stream.Position), WebSocketMessageType.Binary, true, cancellationToken);
 		}
 	}
 
@@ -124,7 +124,7 @@ namespace ArStomp
 			Headers["reply-to"] = "/temp-queue/rpc-replies";
 			if (correlationId != null) Headers["correlation-id"] = correlationId;
 			Headers["content-length"] = body.Length.ToString();
-			Body = body;
+			Body = new ArraySegment<byte>(body, 0, body.Length);
 		}
 	}
 

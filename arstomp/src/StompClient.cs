@@ -40,7 +40,9 @@ namespace ArStomp
 			if (certCollection != null && certCollection.Count > 0)
 			{
 				this.certCollection = certCollection;
-				ws.Options.RemoteCertificateValidationCallback = RemoteCertificateValidationCallback;
+
+				// TODO find alternative method in case of .netstandard2.0
+				// ws.Options.RemoteCertificateValidationCallback = RemoteCertificateValidationCallback;
 			}
 		}
 
@@ -74,7 +76,7 @@ namespace ArStomp
 				(sslPolicyErrors & (SslPolicyErrors.RemoteCertificateNotAvailable)) > 0
 			) return false;
 			// last certificate in chain should be one of our trust anchors
-			X509Certificate2 projectedRootCert = chain.ChainElements[^1].Certificate;
+			X509Certificate2 projectedRootCert = chain.ChainElements[chain.ChainElements.Count - 1].Certificate;
 			// check if server's root ca is one of our trusted
 			bool anytrusted = false;
 			foreach (var cert in certCollection)
@@ -97,7 +99,7 @@ namespace ArStomp
 				{
 					if (frame.Body != null)
 					{
-						reason = Encoding.UTF8.GetString(frame.Body);
+						reason = Encoding.UTF8.GetString(frame.Body.Array, frame.Body.Offset, frame.Body.Count);
 					}
 				}
 				throw new Exception($"Unexpected frame '{frame.Type}'. Message from server: {reason}");
@@ -138,7 +140,7 @@ namespace ArStomp
 		/// <param name="destination">queue o exchange (eg /exchange/name/routing-key in case of RabbitMQ)</param>
 		/// <param name="correlationId">property correlationId for the message</param>
 		/// <param name="body">content of the message</param>
-		public ValueTask Send(string destination, string correlationId, byte[] body)
+		public Task Send(string destination, string correlationId, byte[] body)
 		{
 			var ct = Token.Token;
 

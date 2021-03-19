@@ -9,7 +9,7 @@ using System.Text;
 
 namespace ArStomp
 {
-internal static class Helpers
+	internal static class Helpers
 	{
 		/// <summary>
 		/// Static instance of heartbeat frame
@@ -27,25 +27,25 @@ internal static class Helpers
 
 		internal static string GetCmdString(FrameType type)
 		{
-			return type switch
+			switch (type)
 			{
-				FrameType.Unknown => "UNKNOWN",
-				FrameType.Connected => "CONNECTED",
-				FrameType.Message => "MESSAGE",
-				FrameType.Receipt => "RECEIPT",
-				FrameType.Error => "ERROR",
-				FrameType.Stomp => "STOMP",
-				FrameType.Send => "SEND",
-				FrameType.Subscribe => "SUBSCRIBE",
-				FrameType.Unsubscribe => "UNSUBSCRIBE",
-				FrameType.Ack => "ACK",
-				FrameType.Nack => "NACK",
-				FrameType.Begin => "BEGIN",
-				FrameType.Commit => "COMMIT",
-				FrameType.Abort => "ABORT",
-				FrameType.Disconnect => "DISCONNECT",
-				FrameType.Heartbeat => "",
-				_ => "UNKNOWN"
+				case FrameType.Unknown: return "UNKNOWN";
+				case FrameType.Connected: return "CONNECTED";
+				case FrameType.Message: return "MESSAGE";
+				case FrameType.Receipt: return "RECEIPT";
+				case FrameType.Error: return "ERROR";
+				case FrameType.Stomp: return "STOMP";
+				case FrameType.Send: return "SEND";
+				case FrameType.Subscribe: return "SUBSCRIBE";
+				case FrameType.Unsubscribe: return "UNSUBSCRIBE";
+				case FrameType.Ack: return "ACK";
+				case FrameType.Nack: return "NACK";
+				case FrameType.Begin: return "BEGIN";
+				case FrameType.Commit: return "COMMIT";
+				case FrameType.Abort: return "ABORT";
+				case FrameType.Disconnect: return "DISCONNECT";
+				case FrameType.Heartbeat: return "";
+				default: return "UNKNOWN";
 			};
 		}
 		private static async Task GetMessage(MemoryStream output, ClientWebSocket ws, CancellationToken cancellationToken)
@@ -148,7 +148,7 @@ internal static class Helpers
 					throw new Exception("Cannot parse header");
 				}
 				var key = line.Substring(0, colon);
-				var value = line[(colon + 1)..];
+				var value = line.Substring(colon + 1);
 				frame.Headers[key.ToLower()] = value;
 
 				line = reader.ReadLine().TrimEnd(); // next header
@@ -178,6 +178,13 @@ internal static class Helpers
 			}
 			if (StompClient.Debug) Console.WriteLine("<<<\n{0}\n<<<\n", frame);
 			return frame;
+		}
+	}
+	internal static class Backports
+	{
+		public static void WriteWholeArray(this MemoryStream stream, byte[] data)
+		{
+			stream.Write(data, 0, data.Length);
 		}
 	}
 }

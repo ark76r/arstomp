@@ -41,8 +41,8 @@ namespace ArStomp
 			{
 				this.certCollection = certCollection;
 
-				// TODO find alternative method in case of .netstandard2.0
-				// ws.Options.RemoteCertificateValidationCallback = RemoteCertificateValidationCallback;
+				// In .netstandard2.0 - setup validator globally
+				System.Net.ServicePointManager.ServerCertificateValidationCallback = RemoteCertificateValidationCallback;
 			}
 		}
 

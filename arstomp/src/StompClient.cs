@@ -1,12 +1,13 @@
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
-using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using WebSocketSharp;
+using WebSocketSharp.Net;
 
 namespace ArStomp
 {
@@ -17,7 +18,8 @@ namespace ArStomp
 	{
 		private Task runner = null;
 		public static bool Debug { get; set; } = false;
-		private ClientWebSocket ws = new ClientWebSocket();
+		private WebSocket ws;
+		private volatile bool stompConnected = false;
 		public CancellationTokenSource Token { get; } = new CancellationTokenSource();
 		private readonly X509Certificate2Collection certCollection;
 		private readonly Dictionary<string, Subscription> subs = new Dictionary<string, Subscription>();
@@ -34,9 +36,6 @@ namespace ArStomp
 		/// <param name="certCollection">collection of root ca certificates (if TLS is used)</param>
 		public StompClient(X509Certificate2Collection certCollection = null)
 		{
-
-			ws = new ClientWebSocket();
-			ws.Options.AddSubProtocol("v12.stomp");
 			if (certCollection != null && certCollection.Count > 0)
 			{
 				this.certCollection = certCollection;
@@ -112,19 +111,35 @@ namespace ArStomp
 		/// <param name="uri">uri in format ws://host[:port][/path] or wss://host[:port][/path]</param>
 		/// <param name="login">login name</param>
 		/// <param name="password">password</param>
-		public async Task Connect(Uri uri, string login, string password)
+		public Task Connect(Uri uri, string login, string password)
 		{
-			if (runner != null) throw new Exception("Cannot connect in this state. Should close before");
+			if (ws != null) throw new Exception("Cannot connect in this state. Should close before");
+			ws = new WebSocket(uri.ToString(), "v12.stomp");
+
 			var ct = Token.Token;
-			await ws.ConnectAsync(uri, ct);
 
-			StompFrm connect = new StompFrm(login, password);
-			await connect.Serialize(ws, ct);
+			ws.OnClose += (sender, o) =>
+			{
+				Token.Cancel();
+			};
 
-			Frame fr = await Helpers.GetFrame(ws, ct);
+			ws.OnOpen += (sender, o) =>
+			{
+				StompFrm connect = new StompFrm(login, password);
+				Task.Run(async () => { await connect.Serialize(ws, ct);});
+			};
 
-			ExpectFrame(fr, FrameType.Connected);
-			runner = Run(); // Run is async
+			ws.OnMessage += (sender, o) =>
+			{
+				//Frame fr = await Helpers.GetFrame(ws, ct);
+				//ExpectFrame(fr, FrameType.Connected);
+				System.Console.WriteLine("Msg: type {0} data: {1}", o.Type.ToString(), o.ToString());
+			};
+
+			ws.Connect();
+
+			//runner = Run(); // Run is async
+			return Task.CompletedTask;
 		}
 		/// <summary>
 		/// Reports state of conection
@@ -132,7 +147,7 @@ namespace ArStomp
 		/// <returns>true if it looks like we have proper connection to server</returns>
 		public bool IsConnected()
 		{
-			return ws.CloseStatus == null;
+			return ws.IsAlive;
 		}
 		/// <summary>
 		/// Send message
@@ -194,7 +209,7 @@ namespace ArStomp
 					Frame fr = null;
 					try
 					{
-						fr = await Helpers.GetFrame(ws, ct);
+						//fr = await Helpers.GetFrame(ws, ct);
 					}
 					catch (ThreadInterruptedException)
 					{
@@ -229,18 +244,19 @@ namespace ArStomp
 		/// Cancel current operaton and close connection
 		/// </summary>
 		/// <returns></returns>
-		public async Task Close()
+		public Task Close()
 		{
 			try
 			{
 				Token.Cancel();
 				var ct = new CancellationTokenSource().Token;
-				await ws.CloseAsync(WebSocketCloseStatus.Empty, null, ct);
+				ws.Close();
 			}
 			catch
 			{
 				// skip
 			}
+			return Task.CompletedTask;
 		}
 	}
 	/// <summary>

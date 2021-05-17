@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using System.IO;
 using System.Text;
-
+using WebSocketSharp;
+using WebSocketSharp.Net;
 
 namespace ArStomp
 {
@@ -68,7 +68,7 @@ namespace ArStomp
 			return sb.ToString();
 		}
 
-		internal Task Serialize(ClientWebSocket ws, CancellationToken cancellationToken)
+		internal Task Serialize(WebSocket ws, CancellationToken cancellationToken)
 		{
 			var utf8 = Encoding.UTF8;
 			var EOL = utf8.GetBytes("\n");
@@ -100,7 +100,10 @@ namespace ArStomp
 			stream.Flush();
 			var array = stream.GetBuffer();
 			if (StompClient.Debug) Console.WriteLine(">>>\n{0}\n>>>\n", this);
-			return ws.SendAsync(new ArraySegment<byte>(array, 0, (int)stream.Position), WebSocketMessageType.Binary, true, cancellationToken);
+			stream.Position = 0;
+			ws.Send(stream, (int) stream.Length, false);
+			return Task.CompletedTask;
+			//return ws.SendAsync(new ArraySegment<byte>(array, 0, (int)stream.Position), WebSocketMessageType.Binary, true, cancellationToken);
 		}
 	}
 

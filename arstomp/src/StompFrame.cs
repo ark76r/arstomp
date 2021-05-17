@@ -101,7 +101,7 @@ namespace ArStomp
 			var array = stream.GetBuffer();
 			if (StompClient.Debug) Console.WriteLine(">>>\n{0}\n>>>\n", this);
 			stream.Position = 0;
-			ws.Send(stream, (int) stream.Length, false);
+			ws.Send(stream, (int) stream.Length);
 			return Task.CompletedTask;
 			//return ws.SendAsync(new ArraySegment<byte>(array, 0, (int)stream.Position), WebSocketMessageType.Binary, true, cancellationToken);
 		}

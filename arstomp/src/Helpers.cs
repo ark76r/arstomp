@@ -48,28 +48,6 @@ namespace ArStomp
 				default: return "UNKNOWN";
 			};
 		}
-		private static async Task GetMessage(MemoryStream output, ClientWebSocket ws, CancellationToken cancellationToken)
-		{
-			var barray = new byte[128 * 1024];
-			// read first frame
-			ArraySegment<byte> buffer = new ArraySegment<byte>(barray);
-			var result = await ws.ReceiveAsync(buffer, cancellationToken);
-
-			if (result.CloseStatus != null)
-			{
-				throw new Exception($"Unexpected close: {result.CloseStatus}: {result.CloseStatusDescription}");
-			}
-
-			output.Write(barray, 0, result.Count);
-
-			while (result.EndOfMessage != true)
-			{
-				buffer = new ArraySegment<byte>(barray);
-				result = await ws.ReceiveAsync(buffer, cancellationToken);
-				output.Write(barray, 0, result.Count);
-			}
-			output.Seek(0, SeekOrigin.Begin);
-		}
 
 		private static StreamReader findBody(Stream input)
 		{
@@ -101,20 +79,12 @@ namespace ArStomp
 			return new StreamReader(output, Encoding.UTF8); // return UTF8 reader
 		}
 
-		internal static async Task<Frame> GetFrame(ClientWebSocket ws, CancellationToken cancellationToken)
+		internal static Frame GetFrame(byte[] msgBuffer, CancellationToken cancellationToken)
 		{
 			var utf8 = Encoding.UTF8;
 
-			var inputstream = new MemoryStream();
+			var inputstream = new MemoryStream(msgBuffer);
 			var bodyoutput = new MemoryStream();
-			try
-			{
-				await GetMessage(inputstream, ws, cancellationToken);
-			}
-			catch (TaskCanceledException)
-			{
-				return HeartbeatFrame; // just return empty frame
-			}
 
 			if (inputstream.ReadByte() == 10)
 			{

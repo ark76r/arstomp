@@ -66,25 +66,55 @@ namespace ArStomp
 		/// <returns>true if server certificate is valid, false otherwise</returns>
 		private bool RemoteCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
 		{
-			if (Debug) Console.WriteLine("Custom RemoteCertificateValidationCallback");
+			if (Debug)
+            {
+				System.Console.WriteLine("Subject: {0}", certificate.Subject.ToString());
+				System.Console.WriteLine("Cert: {0}", certificate.ToString());
+            }
 			// if there is no detected problems we can say OK
-			if ((sslPolicyErrors & (SslPolicyErrors.None)) > 0) return true;
+			if ((sslPolicyErrors & (SslPolicyErrors.None)) > 0)
+			{
+				if (Debug) System.Console.WriteLine("Cert OK: ((sslPolicyErrors & (SslPolicyErrors.None)) > 0)");
+				return true;
+			}
 			// sins that cannot be forgiven
 			if (
 				(sslPolicyErrors & (SslPolicyErrors.RemoteCertificateNameMismatch)) > 0 ||
 				(sslPolicyErrors & (SslPolicyErrors.RemoteCertificateNotAvailable)) > 0
-			) return false;
+			)
+			{
+				if (Debug) System.Console.WriteLine("Cert Fail: (sslPolicyErrors & (SslPolicyErrors.RemoteCertificateNameMismatch)) > 0 - {0}", (sslPolicyErrors & (SslPolicyErrors.RemoteCertificateNameMismatch)) > 0);
+				if (Debug) System.Console.WriteLine("Cert Fail: (sslPolicyErrors & (SslPolicyErrors.RemoteCertificateNotAvailable)) > 0 - {0}", (sslPolicyErrors & (SslPolicyErrors.RemoteCertificateNotAvailable)) > 0);
+				return false;
+			}
+			if (Debug)
+            {
+				System.Console.WriteLine("Chain:");
+				foreach (var ce in chain.ChainElements)
+                {
+					System.Console.WriteLine("Element: {0}", ce.Certificate);
+                }
+            }
 			// last certificate in chain should be one of our trust anchors
 			X509Certificate2 projectedRootCert = chain.ChainElements[chain.ChainElements.Count - 1].Certificate;
 			// check if server's root ca is one of our trusted
 			bool anytrusted = false;
 			foreach (var cert in certCollection)
 			{
+				if (Debug) System.Console.WriteLine("Anytrust: {0}, {1} =? {2}", projectedRootCert.Thumbprint.ToString(),cert.Thumbprint.ToString(), (projectedRootCert.Thumbprint == cert.Thumbprint));
 				anytrusted = anytrusted || (projectedRootCert.Thumbprint == cert.Thumbprint);
 			}
-			if (!anytrusted) return false;
+			if (!anytrusted)
+			{
+				if (Debug) System.Console.WriteLine("Cert Fail: (!anytrusted)");
+				return false;
+			}
 			// any other problems than unknown CA?
-			if (chain.ChainStatus.Any(statusFlags => statusFlags.Status != X509ChainStatusFlags.UntrustedRoot)) return false;
+			if (chain.ChainStatus.Any(statusFlags => statusFlags.Status != X509ChainStatusFlags.UntrustedRoot))
+			{
+				if (Debug) System.Console.WriteLine("Cert Fail: chain.ChainStatus.Any(statusFlags => statusFlags.Status != X509ChainStatusFlags.UntrustedRoot)");
+				return false;
+			}
 			// everything OK
 			if (Debug) Console.WriteLine("Certificate OK");
 			return true;
@@ -116,9 +146,12 @@ namespace ArStomp
 		{
 			if (ws != null) throw new Exception("Cannot connect in this state. Should close before");
 			ws = new WebSocket( uri.ToString(), "v12.stomp");
-			if (uri.Scheme == "wss" && certCollection != null)
+			if (uri.Scheme == "wss")
 			{
-				ws.SslConfiguration.ServerCertificateValidationCallback = RemoteCertificateValidationCallback;
+				if (certCollection != null)
+				{
+					ws.SslConfiguration.ServerCertificateValidationCallback = RemoteCertificateValidationCallback;
+				}
 				ws.SslConfiguration.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12;
 			}
 			var ct = Token.Token;

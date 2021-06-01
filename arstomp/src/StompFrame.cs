@@ -103,18 +103,18 @@ namespace ArStomp
 			stream.Position = 0;
 			ws.Send(stream, (int) stream.Length);
 			return Task.CompletedTask;
-			//return ws.SendAsync(new ArraySegment<byte>(array, 0, (int)stream.Position), WebSocketMessageType.Binary, true, cancellationToken);
 		}
 	}
 
 	internal class StompFrm : Frame
 	{
-		public StompFrm(string login, string passwd)
+		public StompFrm(string login, string passwd, int hbmilis)
 		{
 			Type = FrameType.Stomp;
 			Headers["login"] = login;
 			Headers["passcode"] = passwd;
 			Headers["accept-version"] = "1.2";
+			if (hbmilis > 0) Headers["heart-beat"] = $"{hbmilis},{hbmilis}";
 		}
 	}
 

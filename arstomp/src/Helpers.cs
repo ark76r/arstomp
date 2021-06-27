@@ -86,14 +86,21 @@ namespace ArStomp
 			var inputstream = new MemoryStream(msgBuffer);
 			var bodyoutput = new MemoryStream();
 
-			if (inputstream.ReadByte() == 10)
+			var firstByte = inputstream.ReadByte();
+			if (firstByte == 10)
 			{
 				return HeartbeatFrame;
 			}
-			else
-			{
-				inputstream.Seek(0, SeekOrigin.Begin);
+			else if (firstByte == 13) {
+				var secondByte = inputstream.ReadByte();
+				if (secondByte == 10) {
+					return HeartbeatFrame;
+				} else {
+					throw new Exception("Invalid frame");
+				}
 			}
+			// start from beginning
+			inputstream.Seek(0, SeekOrigin.Begin);
 
 			StreamReader reader = findBody(inputstream);
 

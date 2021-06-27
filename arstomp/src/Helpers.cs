@@ -115,7 +115,7 @@ namespace ArStomp
 				var colon = line.IndexOf(":");
 				if (colon < 1) // must exist and cannot by first character in the line
 				{
-					throw new Exception("Cannot parse header");
+					throw new Exception($"Cannot parse header: colon not found. Cmd: {cmd}, line: `${line}`");
 				}
 				var key = line.Substring(0, colon);
 				var value = line.Substring(colon + 1);

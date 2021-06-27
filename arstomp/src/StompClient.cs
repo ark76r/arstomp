@@ -286,15 +286,8 @@ namespace ArStomp
 			var ct = Token.Token;
 			try
 			{
-				Frame fr = null;
-				try
-				{
-					fr = Helpers.GetFrame(msg.RawData, ct);
-				}
-				catch (Exception e)
-				{
-					throw e;
-				}
+				Frame fr = Helpers.GetFrame(msg.RawData, ct);
+
 				if (fr.Type == FrameType.Error) ExpectFrame(fr, FrameType.Message);
 				if (fr.Type == FrameType.Message)
 				{

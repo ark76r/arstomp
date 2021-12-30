@@ -81,10 +81,7 @@ namespace ArStomp
 
 		internal static Frame GetFrame(byte[] msgBuffer, CancellationToken cancellationToken)
 		{
-			var utf8 = Encoding.UTF8;
-
 			var inputstream = new MemoryStream(msgBuffer);
-			var bodyoutput = new MemoryStream();
 
 			var firstByte = inputstream.ReadByte();
 			if (firstByte == 10)
